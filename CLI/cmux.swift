@@ -7603,14 +7603,16 @@ struct CMUXCLI {
                     pid: claudePid
                 )
             }
-            try setClaudeStatus(
-                client: client,
-                workspaceId: workspaceId,
-                value: "Running",
-                icon: "bolt.fill",
-                color: "#4C8DFF",
-                pid: claudePid
-            )
+            // Register PID for stale-session detection and OSC suppression,
+            // but don't set a visible status. "Running" only appears when the
+            // user submits a prompt (UserPromptSubmit) or Claude starts working
+            // (PreToolUse).
+            if let claudePid {
+                _ = try? sendV1Command(
+                    "set_agent_pid claude_code \(claudePid) --tab=\(workspaceId)",
+                    client: client
+                )
+            }
             print("OK")
 
         case "stop", "idle":
@@ -7622,6 +7624,7 @@ struct CMUXCLI {
             )
             let workspaceId = consumedSession?.workspaceId ?? fallbackWorkspaceId
             try clearClaudeStatus(client: client, workspaceId: workspaceId)
+            _ = try? sendV1Command("clear_agent_pid claude_code --tab=\(workspaceId)", client: client)
 
             if let completion = summarizeClaudeHookStop(
                 parsedInput: parsedInput,
@@ -7716,6 +7719,7 @@ struct CMUXCLI {
             )
             let workspaceId = consumedSession?.workspaceId ?? fallbackWorkspaceId
             _ = try? clearClaudeStatus(client: client, workspaceId: workspaceId)
+            _ = try? sendV1Command("clear_agent_pid claude_code --tab=\(workspaceId)", client: client)
             _ = try? sendV1Command("clear_notifications --tab=\(workspaceId)", client: client)
             print("OK")
 
