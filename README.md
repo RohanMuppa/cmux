@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  English | <a href="README.zh-CN.md">简体中文</a> | <a href="README.zh-TW.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.pt-BR.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a>
+  English | <a href="README.zh-CN.md">简体中文</a> | <a href="README.zh-TW.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.pt-BR.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.km.md">ភាសាខ្មែរ</a>
 </p>
 
 <p align="center">
@@ -116,6 +116,10 @@ cmux is a primitive, not a solution. It gives you a terminal, a browser, notific
 The best developers have always built their own tools. Nobody has figured out the best way to work with agents yet, and the teams building closed products definitely haven't either. The developers closest to their own codebases will figure it out first.
 
 Give a million developers composable primitives and they'll collectively find the most efficient workflows faster than any product team could design top-down.
+
+## Documentation
+
+For more info on how to configure cmux, [head over to our docs](https://cmux.dev/docs/getting-started?utm_source=readme).
 
 ## Keyboard Shortcuts
 
@@ -233,10 +237,10 @@ cmux does **not** restore live process state inside terminal apps. For example, 
 
 Ways to get involved:
 
-- Follow us on X for updates [@manaflowai](https://x.com/manaflowai) or [@lawrencecchen](https://x.com/lawrencecchen)
+- Follow us on X for updates [@manaflowai](https://x.com/manaflowai), [@lawrencecchen](https://x.com/lawrencecchen), and [@austinywang](https://x.com/austinywang)
 - Join the conversation on [Discord](https://discord.gg/xsgFEVrWCZ)
 - Create and participate in [GitHub issues](https://github.com/manaflow-ai/cmux/issues) and [discussions](https://github.com/manaflow-ai/cmux/discussions)
-- Let me know what you're building with cmux
+- Let us know what you're building with cmux
 
 ## Community
 
@@ -245,6 +249,7 @@ Ways to get involved:
 - [X / Twitter](https://twitter.com/manaflowai)
 - [YouTube](https://www.youtube.com/channel/UCAa89_j-TWkrXfk9A3CbASw)
 - [LinkedIn](https://www.linkedin.com/company/manaflow-ai/)
+- [Reddit](https://www.reddit.com/r/cmux/)
 
 ## Founder's Edition
 
