@@ -1745,6 +1745,13 @@ class GhosttyApp {
                           let tabId = tabManager.selectedTabId else {
                         return false
                     }
+                    // Suppress OSC notifications for workspaces with active Claude hook sessions.
+                    // The hook system manages notifications with proper lifecycle tracking;
+                    // raw OSC notifications would duplicate or outlive the structured hooks.
+                    if let workspace = tabManager.tabs.first(where: { $0.id == tabId }),
+                       workspace.statusEntries["claude_code"] != nil {
+                        return true
+                    }
                     let tabTitle = tabManager.titleForTab(tabId) ?? "Terminal"
                     let command = actionTitle.isEmpty ? tabTitle : actionTitle
                     let body = actionBody
@@ -2017,6 +2024,11 @@ class GhosttyApp {
             let actionBody = action.action.desktop_notification.body
                 .flatMap { String(cString: $0) } ?? ""
             performOnMain {
+                // Suppress OSC notifications for workspaces with active Claude hook sessions.
+                if let workspace = AppDelegate.shared?.tabManager?.tabs.first(where: { $0.id == tabId }),
+                   workspace.statusEntries["claude_code"] != nil {
+                    return
+                }
                 let tabTitle = AppDelegate.shared?.tabManager?.titleForTab(tabId) ?? "Terminal"
                 let command = actionTitle.isEmpty ? tabTitle : actionTitle
                 let body = actionBody

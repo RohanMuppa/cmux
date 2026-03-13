@@ -998,6 +998,9 @@ final class Workspace: Identifiable, ObservableObject {
     @Published var surfaceListeningPorts: [UUID: [Int]] = [:]
     @Published var listeningPorts: [Int] = []
     var surfaceTTYNames: [UUID: String] = [:]
+    /// PIDs associated with agent status entries (e.g. claude_code), keyed by status key.
+    /// Used for stale-session detection: if the PID is dead, the status entry is cleared.
+    var agentPIDs: [String: pid_t] = [:]
     private var restoredTerminalScrollbackByPanelId: [UUID: String] = [:]
 
     var focusedSurfaceId: UUID? { focusedPanelId }
@@ -1688,6 +1691,7 @@ final class Workspace: Identifiable, ObservableObject {
 
     func resetSidebarContext(reason: String = "unspecified") {
         statusEntries.removeAll()
+        agentPIDs.removeAll()
         logEntries.removeAll()
         progress = nil
         gitBranch = nil

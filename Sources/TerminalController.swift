@@ -12886,6 +12886,14 @@ class TerminalController {
             return tabResolution.error ?? "ERROR: No tab selected"
         }
 
+        let pidValue: pid_t? = {
+            if let rawPid = normalizedOptionValue(parsed.options["pid"]),
+               let p = Int32(rawPid), p > 0 {
+                return p
+            }
+            return nil
+        }()
+
         DispatchQueue.main.async { [weak self] in
             guard let self, let tab = self.tabForSidebarMutation(id: targetTabId) else { return }
             guard Self.shouldReplaceStatusEntry(
@@ -12898,6 +12906,10 @@ class TerminalController {
                 priority: priority,
                 format: format
             ) else {
+                // Still update PID tracking even if the status display hasn't changed.
+                if let pidValue {
+                    tab.agentPIDs[key] = pidValue
+                }
                 return
             }
             tab.statusEntries[key] = SidebarStatusEntry(
@@ -12910,6 +12922,9 @@ class TerminalController {
                 format: format,
                 timestamp: Date()
             )
+            if let pidValue {
+                tab.agentPIDs[key] = pidValue
+            }
         }
         return "OK"
     }
@@ -12929,6 +12944,7 @@ class TerminalController {
             if tab.statusEntries.removeValue(forKey: key) == nil {
                 result = "OK (key not found)"
             }
+            tab.agentPIDs.removeValue(forKey: key)
         }
         return result
     }
