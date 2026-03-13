@@ -1,14 +1,11 @@
 "use client";
 
-import posthog from "posthog-js";
-
 export function GitHubButton() {
   return (
     <a
       href="https://github.com/manaflow-ai/cmux"
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => posthog.capture("cmuxterm_github_clicked", { location: "hero" })}
       className="inline-flex items-center whitespace-nowrap gap-2 rounded-full border border-border px-5 py-2.5 text-[15px] font-medium text-foreground hover:bg-code-bg transition-colors"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

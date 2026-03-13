@@ -393,8 +393,7 @@ class TerminalController {
         extra: [String: Any] = [:]
     ) {
         let data = socketListenerEventData(stage: stage, errnoCode: errnoCode, extra: extra)
-        sentryBreadcrumb(message, category: "socket", data: data)
-        sentryCaptureError(message, category: "socket", data: data, contextKey: "socket_listener")
+        NSLog("TerminalController: %@ %@", message, String(describing: data))
     }
 
     func start(tabManager: TabManager, socketPath: String, accessMode: SocketControlMode) {
@@ -473,14 +472,6 @@ class TerminalController {
 
         isRunning = true
         print("TerminalController: Listening on \(socketPath)")
-        sentryBreadcrumb(
-            "socket.listener.listening",
-            category: "socket",
-            data: [
-                "path": socketPath,
-                "mode": accessMode.rawValue
-            ]
-        )
 
         // Wire batched port scanner results back to workspace state.
         PortScanner.shared.onPortsUpdated = { [weak self] workspaceId, panelId, ports in
@@ -537,15 +528,6 @@ class TerminalController {
         if chmod(socketPath, permissions) != 0 {
             let errnoCode = errno
             print("TerminalController: Failed to set socket permissions to \(String(permissions, radix: 8)) for \(socketPath)")
-            sentryBreadcrumb(
-                "socket.listener.permissions.failed",
-                category: "socket",
-                data: socketListenerEventData(
-                    stage: "chmod",
-                    errnoCode: errnoCode,
-                    extra: ["permissions": String(permissions, radix: 8)]
-                )
-            )
         }
     }
 
@@ -642,34 +624,13 @@ class TerminalController {
 
     private nonisolated func acceptLoop() {
         acceptLoopAlive = true
-        sentryBreadcrumb(
-            "socket.listener.accept_loop.started",
-            category: "socket",
-            data: socketListenerEventData(stage: "accept_loop_start")
-        )
         var exitReason = "stopped"
-        var lastAcceptErrno: Int32?
         defer {
             if isRunning && exitReason == "stopped" {
                 exitReason = "unexpected_loop_exit"
             }
-            let shouldCaptureExit = exitReason != "stopped"
             acceptLoopAlive = false
             isRunning = false
-            if shouldCaptureExit {
-                let data = socketListenerEventData(
-                    stage: "accept_loop_exit",
-                    errnoCode: lastAcceptErrno,
-                    extra: ["reason": exitReason]
-                )
-                sentryBreadcrumb("socket.listener.accept_loop.exited", category: "socket", data: data)
-                sentryCaptureError(
-                    "socket.listener.accept_loop.exited",
-                    category: "socket",
-                    data: data,
-                    contextKey: "socket_listener"
-                )
-            }
         }
 
         var consecutiveFailures = 0
@@ -685,21 +646,8 @@ class TerminalController {
 
             guard clientSocket >= 0 else {
                 if isRunning {
-                    let errnoCode = errno
-                    lastAcceptErrno = errnoCode
                     consecutiveFailures += 1
                     print("TerminalController: Accept failed (\(consecutiveFailures) consecutive)")
-                    if consecutiveFailures == 1 || consecutiveFailures % 10 == 0 {
-                        sentryBreadcrumb(
-                            "socket.listener.accept.failed",
-                            category: "socket",
-                            data: socketListenerEventData(
-                                stage: "accept",
-                                errnoCode: errnoCode,
-                                extra: ["consecutiveFailures": consecutiveFailures]
-                            )
-                        )
-                    }
                     if consecutiveFailures >= 50 {
                         print("TerminalController: Too many consecutive accept failures, exiting accept loop")
                         exitReason = "too_many_accept_failures"

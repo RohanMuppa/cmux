@@ -3,7 +3,6 @@ import SwiftUI
 import Bonsplit
 import CoreServices
 import UserNotifications
-import Sentry
 import WebKit
 import Combine
 import ObjectiveC.runtime
@@ -1474,8 +1473,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var sessionAutosaveTimer: DispatchSourceTimer?
     private var socketListenerHealthTimer: DispatchSourceTimer?
     private static let socketListenerHealthCheckInterval: DispatchTimeInterval = .seconds(5)
-    private var lastSocketListenerUnhealthyCaptureAt: Date = .distantPast
-    private static let socketListenerUnhealthyCaptureCooldown: TimeInterval = 60
     private let sessionPersistenceQueue = DispatchQueue(
         label: "com.cmuxterm.app.sessionPersistence",
         qos: .utility
@@ -1561,7 +1558,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
         let env = ProcessInfo.processInfo.environment
         let isRunningUnderXCTest = isRunningUnderXCTest(env)
-        let telemetryEnabled = TelemetrySettings.enabledForCurrentLaunch
 
 #if DEBUG
         // UI tests run on a shared VM user profile, so persisted shortcuts can drift and make
@@ -1577,34 +1573,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             self?.writeUITestDiagnosticsIfNeeded(stage: "after1s")
         }
 #endif
-
-        if telemetryEnabled {
-            SentrySDK.start { options in
-                options.dsn = "https://ecba1ec90ecaee02a102fba931b6d2b3@o4507547940749312.ingest.us.sentry.io/4510796264636416"
-                #if DEBUG
-                options.environment = "development"
-                options.debug = true
-                #else
-                options.environment = "production"
-                options.debug = false
-                #endif
-                options.sendDefaultPii = false
-
-                // Performance tracing (10% of transactions)
-                options.tracesSampleRate = 0.1
-                // Keep app-hang tracking enabled, but avoid reporting short main-thread stalls
-                // as hangs in normal user interaction flows.
-                options.appHangTimeoutInterval = 8.0
-                // Attach stack traces to all events
-                options.attachStacktrace = true
-                // Avoid recursively capturing failed requests from Sentry's own ingestion endpoint.
-                options.enableCaptureFailedRequests = false
-            }
-        }
-
-        if telemetryEnabled && !isRunningUnderXCTest {
-            PostHogAnalytics.shared.startIfNeeded()
-        }
 
         // UI tests frequently time out waiting for the main window if we do heavyweight
         // LaunchServices registration / single-instance enforcement synchronously at startup.
@@ -1705,15 +1673,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 #endif
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        sentryBreadcrumb("app.didBecomeActive", category: "lifecycle", data: [
-            "tabCount": tabManager?.tabs.count ?? 0
-        ])
-        let env = ProcessInfo.processInfo.environment
-        if TelemetrySettings.enabledForCurrentLaunch && !isRunningUnderXCTest(env) {
-            PostHogAnalytics.shared.trackDailyActive(reason: "didBecomeActive")
-            PostHogAnalytics.shared.trackHourlyActive(reason: "didBecomeActive")
-        }
-
         guard let tabManager, let notificationStore else { return }
         guard let tabId = tabManager.selectedTabId else { return }
         let surfaceId = tabManager.focusedSurfaceId(for: tabId)
@@ -1741,9 +1700,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         TerminalController.shared.stop()
         VSCodeServeWebController.shared.stop()
         BrowserHistoryStore.shared.flushPendingSaves()
-        if TelemetrySettings.enabledForCurrentLaunch {
-            PostHogAnalytics.shared.flush()
-        }
         notificationStore?.clearAll()
         enableSuddenTerminationIfNeeded()
     }
@@ -2368,11 +2324,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private func restartSocketListenerIfEnabled(source: String) {
         guard let tabManager,
               let config = socketListenerConfigurationIfEnabled() else { return }
-        sentryBreadcrumb("socket.listener.restart", category: "socket", data: [
-            "mode": config.mode.rawValue,
-            "path": config.path,
-            "source": source
-        ])
         TerminalController.shared.stop()
         TerminalController.shared.start(tabManager: tabManager, socketPath: config.path, accessMode: config.mode)
     }
@@ -2401,31 +2352,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private func restartSocketListenerIfNeededForHealthCheck(source: String) {
         guard let config = socketListenerConfigurationIfEnabled() else { return }
         let health = TerminalController.shared.socketListenerHealth(expectedSocketPath: config.path)
-        guard !health.isHealthy else {
-            lastSocketListenerUnhealthyCaptureAt = .distantPast
-            return
-        }
-        let failureSignals = health.failureSignals
-        let data: [String: Any] = [
-            "source": source,
-            "path": config.path,
-            "isRunning": health.isRunning ? 1 : 0,
-            "acceptLoopAlive": health.acceptLoopAlive ? 1 : 0,
-            "socketPathMatches": health.socketPathMatches ? 1 : 0,
-            "socketPathExists": health.socketPathExists ? 1 : 0,
-            "failureSignals": failureSignals
-        ]
-        sentryBreadcrumb("socket.listener.unhealthy", category: "socket", data: data)
-        let now = Date()
-        if now.timeIntervalSince(lastSocketListenerUnhealthyCaptureAt) >= Self.socketListenerUnhealthyCaptureCooldown {
-            lastSocketListenerUnhealthyCaptureAt = now
-            sentryCaptureWarning(
-                "socket.listener.unhealthy",
-                category: "socket",
-                data: data,
-                contextKey: "socket_listener_health"
-            )
-        }
+        guard !health.isHealthy else { return }
         restartSocketListenerIfEnabled(source: source)
     }
 
@@ -4841,9 +4768,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
     }
 
-    @objc func triggerSentryTestCrash(_ sender: Any?) {
-        SentrySDK.crash()
-    }
 #endif
 
 #if DEBUG
@@ -6957,9 +6881,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         register: @escaping (CFURL) -> OSStatus = { url in
             LSRegisterURL(url, true)
         },
-        breadcrumb: @escaping (_ message: String, _ data: [String: Any]) -> Void = { message, data in
-            sentryBreadcrumb(message, category: "startup", data: data)
-        }
+        breadcrumb: @escaping (_ message: String, _ data: [String: Any]) -> Void = { _, _ in }
     ) {
         let normalizedURL = bundleURL.standardizedFileURL
         breadcrumb("launchservices.register.schedule", [

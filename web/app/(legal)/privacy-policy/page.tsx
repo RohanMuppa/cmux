@@ -48,9 +48,7 @@ export default function PrivacyPolicyPage() {
         The Application may collect the following information automatically:
       </p>
       <ul>
-        <li>Crash reports and error diagnostics (via Sentry)</li>
         <li>Operating system version and application version</li>
-        <li>Anonymous usage patterns</li>
       </ul>
       <p>
         The Application checks for updates via Sparkle, which may transmit your
@@ -76,11 +74,6 @@ export default function PrivacyPolicyPage() {
         The Application integrates with the following third-party services:
       </p>
       <ul>
-        <li>
-          <strong>Sentry</strong> &mdash; error tracking and crash reporting.
-          May collect error logs, stack traces, device information, and OS
-          version.
-        </li>
         <li>
           <strong>Sparkle</strong> &mdash; auto-update framework. Transmits
           application and OS version to check for updates.

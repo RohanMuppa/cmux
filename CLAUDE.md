@@ -1,5 +1,34 @@
 # cmux agent notes
 
+## Telemetry removal policy (LOCAL FORK)
+
+This is a local fork with **all outbound telemetry removed** (PostHog analytics and Sentry crash reporting). Only Sparkle auto-updates are kept. When pulling upstream changes from `manaflow-ai/cmux`, you MUST strip any re-introduced telemetry:
+
+### What to reject on merge/rebase
+- Any `import Sentry` or `import PostHog` / `import PostHog` in Swift files
+- Any `posthog` imports or `posthog.capture()` calls in `.tsx`/`.ts` files
+- Any `SentrySDK.*`, `sentryBreadcrumb()`, `sentryCaptureError()`, `sentryCaptureWarning()` calls
+- Any `PostHogAnalytics.*` calls
+- Any `TelemetrySettings` enum or references
+- Any `posthog-ios` or `sentry-cocoa` SPM package additions in `project.pbxproj`
+- Any `posthog-js` dependency in `web/package.json`
+- Any PostHog proxy rewrites in `web/next.config.ts`
+- Any "Upload dSYMs to Sentry" CI steps in `.github/workflows/*.yml`
+- Any telemetry toggle UI in Settings (send anonymous telemetry toggle)
+- New files like `PostHogAnalytics.swift`, `SentryHelper.swift`, or `web/app/posthog.tsx`
+
+### Deleted files (do not recreate)
+- `Sources/PostHogAnalytics.swift`
+- `Sources/SentryHelper.swift`
+- `web/app/posthog.tsx`
+- `tests/test_cli_socket_sentry_scope.py`
+
+### Quick verification after upstream merge
+```bash
+grep -ri "posthog\|SentrySDK\|sentryBreadcrumb\|sentryCaptureError\|TelemetrySettings\|import Sentry\|import PostHog" Sources/ CLI/ web/app/ --include="*.swift" --include="*.tsx" --include="*.ts"
+```
+Should return nothing.
+
 ## Initial setup
 
 Run the setup script to initialize submodules and build GhosttyKit:
